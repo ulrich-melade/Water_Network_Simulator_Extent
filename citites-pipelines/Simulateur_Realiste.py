@@ -498,16 +498,10 @@ def run_transition(inp_file, duration, state_file, chosen_pipes,
         d_start = np.copy(d_start_raw)
         d_end = np.copy(d_end_raw)
         
-        if start_node in broken_sensors:
+        if start_node in broken_sensors or end_node in broken_sensors or pipe_id in broken_sensors:
             p_start[:] = np.nan
             d_start[:] = np.nan
-        if end_node in broken_sensors:
-            p_end[:] = np.nan
-            d_end[:] = np.nan
-        if pipe_id in broken_sensors:
             velocity[:] = np.nan
-            v_start[:] = np.nan
-            v_end[:] = np.nan
             flowrate[:] = np.nan
             headloss[:] = np.nan
 
