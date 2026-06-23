@@ -41,8 +41,8 @@ _wntr_elements._check_positive_non_zero_float = _check_non_negative_float
 # ==============================================================
 # 1. COURBE DE DEMANDE RÉALISTE (24H)
 # ==============================================================
-# Valeurs normalisées (max = 1.0) basées sur les études ONEMA/OFB
-# de la consommation résidentielle française typique.
+# Valeurs normalisées (max = 1.0) basées sur 
+# Que se cache-t-il derrière les courbes de consommation d’eau ? L’exemple de Paris de Agathe Euzen ( HAL Id: hal-00686872)
 # La valeur 1.0 correspond à peak_demand_L_s dans la config.
 
 DEMAND_CURVE_24H = [
@@ -51,25 +51,25 @@ DEMAND_CURVE_24H = [
     0.11,  # 2h  — minimum nocturne
     0.11,  # 3h
     0.14,  # 4h
-    0.22,  # 5h  — premiers réveils
+    0.20,  # 5h  — premiers réveils
     0.44,  # 6h  — montée matinale
     0.83,  # 7h  — pic matin (douches, petit-déjeuner)
     1.00,  # 8h  — pic matin max
-    0.78,  # 9h  — baisse post-matin
-    0.56,  # 10h — milieu de matinée
-    0.61,  # 11h
-    0.78,  # 12h — pic midi (repas)
-    0.72,  # 13h
-    0.56,  # 14h — début d'après-midi
+    0.85,  # 9h  — baisse post-matin
+    0.75,  # 10h — milieu de matinée
+    0.65,  # 11h
+    0.60,  # 12h — pic midi (repas)
+    0.57,  # 13h
+    0.53,  # 14h — début d'après-midi
     0.50,  # 15h — creux après-midi
-    0.56,  # 16h
-    0.67,  # 17h — montée du soir
-    0.89,  # 18h — pic soir (cuisine, douches)
-    1.00,  # 19h — pic soir max
-    0.83,  # 20h — baisse progressive
-    0.56,  # 21h
-    0.39,  # 22h
-    0.28,  # 23h — nuit
+    0.48,  # 16h
+    0.53,  # 17h — montée du soir
+    0.60,  # 18h — pic soir (cuisine, douches)
+    0.70,  # 19h — pic soir max
+    0.69,  # 20h — baisse progressive
+    0.50,  # 21h
+    0.40,  # 22h
+    0.35,  # 23h — nuit
 ]
 
 
@@ -197,22 +197,34 @@ def prepare_network(wn):
 
 def apply_demand_curve(wn, hour, peak_demand_L_s=200.0):
     """
-    Applique la courbe de demande réaliste sur les nœuds J (jonctions réseau).
-    Le paramètre peak_demand_L_s correspond au débit total ajouté au pic (mult=1.0).
-    Les nœuds M (maisons) gardent leur demande de base constante.
-
+    Applique la courbe de demande réaliste sur les nœuds du réseau.
+    - Pour les nœuds J : la demande de pointe totale est répartie.
+    - Pour les nœuds M (maisons) : on applique la variation journalière à leur demande de base.
+    
     Retourne le multiplicateur de demande utilisé.
     """
     multiplier = get_demand_multiplier(hour)
+    
     j_nodes = [name for name, _ in wn.junctions() if name.startswith('J')]
-    if not j_nodes:
-        return multiplier
-    extra_per_node_m3s = (peak_demand_L_s / 1000.0) * multiplier / len(j_nodes)
-    for name in j_nodes:
+    m_nodes = [name for name, _ in wn.junctions() if name.startswith('M')]
+    
+    # 1. Nœuds J (répartition de la charge de pointe dynamique)
+    if j_nodes:
+        extra_per_node_m3s = (peak_demand_L_s / 1000.0) * multiplier / len(j_nodes)
+        for name in j_nodes:
+            node = wn.get_node(name)
+            if len(node.demand_timeseries_list) > 0:
+                node.demand_timeseries_list[0].base_value += extra_per_node_m3s
+                
+    # 2. Nœuds M (Maisons : suivi du cycle journalier)
+    for name in m_nodes:
         node = wn.get_node(name)
         if len(node.demand_timeseries_list) > 0:
-            node.demand_timeseries_list[0].base_value += extra_per_node_m3s
+            # On applique le multiplicateur à la demande de base du fichier .inp
+            node.demand_timeseries_list[0].base_value *= multiplier
+
     return multiplier
+
 
 
 # ==============================================================
@@ -321,8 +333,10 @@ def run_segment(inp_file, duration, state_file, chosen_pipes, hour_of_day,
 
         # -- Capteurs cassés : panne persistante (tout NaN)--
         # -- Demande (Débit sortant aux noeuds) --
-        d_start = results.node['demand'].loc[:, start_node].values
-        d_end = results.node['demand'].loc[:, end_node].values
+        d_start_raw = results.node['demand'].loc[:, start_node].values
+        d_end_raw = results.node['demand'].loc[:, end_node].values
+        d_start = np.copy(d_start_raw)
+        d_end = np.copy(d_end_raw)
         
         if start_node in broken_sensors:
             p_start[:] = np.nan
@@ -338,15 +352,16 @@ def run_segment(inp_file, duration, state_file, chosen_pipes, hour_of_day,
             headloss[:] = np.nan
 
         res['pipes'][pipe_id] = {
-            'pressure_start': p_start,
-            'pressure_end': p_end,
-            'demand_start': d_start,
-            'demand_end': d_end,
-            'velocity': velocity,
-            'velocity_start': v_start,
-            'velocity_end': v_end,
-            'flowrate': flowrate,
-            'headloss': headloss,
+            'x_pressure': p_start_raw,
+            'yc_pressure': p_start,
+            'x_demand': d_start_raw,
+            'yc_demand': d_start,
+            'x_velocity': v_raw,
+            'yc_velocity': velocity,
+            'x_flowrate': q_raw,
+            'yc_flowrate': flowrate,
+            'x_headloss': h_loss_raw,
+            'yc_headloss': headloss,
             'start_node': start_node,
             'end_node': end_node,
         }
@@ -447,12 +462,10 @@ def run_transition(inp_file, duration, state_file, chosen_pipes,
         hl_f = target_hl.get(pipe_id, hl_i)
 
         # Interpolation mH2O → conversion bar → bruit gaussien
-        p_start = add_sensor_noise(
-            (p_s_i + (p_s_f - p_s_i) * fade) / 10.197, sigma_pressure
-        )
-        p_end = add_sensor_noise(
-            (p_e_i + (p_e_f - p_e_i) * fade) / 10.197, sigma_pressure
-        )
+        p_start_raw = (p_s_i + (p_s_f - p_s_i) * fade) / 10.197
+        p_end_raw = (p_e_i + (p_e_f - p_e_i) * fade) / 10.197
+        p_start = add_sensor_noise(p_start_raw, sigma_pressure)
+        p_end = add_sensor_noise(p_end_raw, sigma_pressure)
 
         # Débit interpolé
         q_i = state['links_flowrate'].get(pipe_id, target_q.get(pipe_id, 0)) if state and 'links_flowrate' in state else target_q.get(pipe_id, 0)
@@ -480,8 +493,10 @@ def run_transition(inp_file, duration, state_file, chosen_pipes,
         d_e_f = target_d.get(end_node, d_e_i)
         
         # We don't necessarily need noise for demand, but we can interpolate it
-        d_start = d_s_i + (d_s_f - d_s_i) * fade
-        d_end = d_e_i + (d_e_f - d_e_i) * fade
+        d_start_raw = d_s_i + (d_s_f - d_s_i) * fade
+        d_end_raw = d_e_i + (d_e_f - d_e_i) * fade
+        d_start = np.copy(d_start_raw)
+        d_end = np.copy(d_end_raw)
         
         if start_node in broken_sensors:
             p_start[:] = np.nan
@@ -497,15 +512,16 @@ def run_transition(inp_file, duration, state_file, chosen_pipes,
             headloss[:] = np.nan
 
         res['pipes'][pipe_id] = {
-            'pressure_start': p_start,
-            'pressure_end': p_end,
-            'demand_start': d_start,
-            'demand_end': d_end,
-            'velocity': velocity,
-            'velocity_start': v_start,
-            'velocity_end': v_end,
-            'flowrate': flowrate,
-            'headloss': headloss,
+            'x_pressure': p_start_raw,
+            'yc_pressure': p_start,
+            'x_demand': d_start_raw,
+            'yc_demand': d_start,
+            'x_velocity': v_interp,
+            'yc_velocity': velocity,
+            'x_flowrate': q_interp,
+            'yc_flowrate': flowrate,
+            'x_headloss': hl_interp,
+            'yc_headloss': headloss,
             'start_node': start_node,
             'end_node': end_node,
         }
@@ -636,58 +652,83 @@ def append_to_csv(csv_filename, results, active_faults, chosen_pipes,
 
     with open(csv_filename, mode) as f:
         if is_first_step:
-            cols = ["t", "uc_demande", "ud", "yd"]
-            for pid in chosen_pipes:
-                cols.extend([f"yc_Pression_{pid}", f"yc_Demande_{pid}", f"yc_Vitesse_{pid}", f"yc_Debit_{pid}", f"yc_PerteCharge_{pid}"])
+            cols = ["t", "uc_demande", "m"]
+            
+            x_cols = [f"x_{i}" for i in range(len(chosen_pipes) * 5)]
+            yc_cols = [f"yc_{i}" for i in range(len(chosen_pipes) * 5)]
+                
+            cols.extend(x_cols)
+            cols.append("h_0")
+            cols.extend(yc_cols)
+            cols.extend(["yd", "ud"])
+            
             f.write("|".join(cols) + "\n")
 
         for t_idx, t_val in enumerate(results['time']):
-            row = [
+            row_start = [
                 f"{t_val:.1f}",
                 f"{demand_multiplier:.4f}",
-                events_str,
-                "no",
+                "on", # m
             ]
-
+            
+            row_x = []
+            row_yc = []
             for pid in chosen_pipes:
                 if pid in results['pipes']:
                     data = results['pipes'][pid]
-                    p = data['pressure_start'][t_idx]
-                    d = data['demand_start'][t_idx] if 'demand_start' in data else 0.0
-                    v = data['velocity_start'][t_idx]
-                    q = data['flowrate'][t_idx] if 'flowrate' in data else 0.0
-                    hl = data['headloss'][t_idx] if 'headloss' in data else 0.0
+                    x_p = data['x_pressure'][t_idx]
+                    yc_p = data['yc_pressure'][t_idx]
+                    x_d = data['x_demand'][t_idx]
+                    yc_d = data['yc_demand'][t_idx]
+                    x_v = data['x_velocity'][t_idx]
+                    yc_v = data['yc_velocity'][t_idx]
+                    x_q = data['x_flowrate'][t_idx]
+                    yc_q = data['yc_flowrate'][t_idx]
+                    x_hl = data['x_headloss'][t_idx]
+                    yc_hl = data['yc_headloss'][t_idx]
 
-                    # Pas de NaN pour HeMU : on utilise -1.0 pour signaler une valeur manquante
-                    row.append("-1.0" if np.isnan(p) else f"{p:.4f}")
-                    row.append("-1.0" if np.isnan(d) else f"{d:.8f}")
-                    row.append("-1.0" if np.isnan(v) else f"{v:.4f}")
-                    row.append("-1.0" if np.isnan(q) else f"{q:.8f}")
-                    row.append("-1.0" if np.isnan(hl) else f"{hl:.4f}")
+                    # Mettre -1.0 si NaN
+                    row_x.append("-1.0" if np.isnan(x_p) else f"{x_p:.4f}")
+                    row_x.append("-1.0" if np.isnan(x_d) else f"{x_d:.8f}")
+                    row_x.append("-1.0" if np.isnan(x_v) else f"{x_v:.4f}")
+                    row_x.append("-1.0" if np.isnan(x_q) else f"{x_q:.8f}")
+                    row_x.append("-1.0" if np.isnan(x_hl) else f"{x_hl:.4f}")
+                    
+                    row_yc.append("-1.0" if np.isnan(yc_p) else f"{yc_p:.4f}")
+                    row_yc.append("-1.0" if np.isnan(yc_d) else f"{yc_d:.8f}")
+                    row_yc.append("-1.0" if np.isnan(yc_v) else f"{yc_v:.4f}")
+                    row_yc.append("-1.0" if np.isnan(yc_q) else f"{yc_q:.8f}")
+                    row_yc.append("-1.0" if np.isnan(yc_hl) else f"{yc_hl:.4f}")
                 else:
-                    row.extend(["-1.0", "-1.0", "-1.0", "-1.0", "-1.0"])
+                    row_x.extend(["-1.0"] * 5)
+                    row_yc.extend(["-1.0"] * 5)
+
+            yd_val = "yes" if events_str != "nominal" else "no"
+            ud_val = events_str if events_str != "nominal" else "no"
+
+            row = row_start + row_x + ["0"] + row_yc + [yd_val, ud_val]
 
             f.write("|".join(row) + "\n")
 
 
 # ==============================================================
-# 9. POINT D'ENTRÉE PRINCIPAL
+# 9. MAIN
 # ==============================================================
 
 if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
     # ── CONFIGURATION DU SCÉNARIO ──────────────────────────────
-    nb_days = 5
+    nb_days = 4
     events = [
         # #Fuite sur P1015 : Jour 2 à 14h30 → Jour 4 à 10h00
-        {
-            'type': 'leak',
-            'start_day': 2, 'start_hour': 14.5,
-            'end_day': 4, 'end_hour': 10.0,
-            'nodes': ['P15'],
-            'coeff': 0.2,
-        },
+        # {
+        #     'type': 'leak',
+        #     'start_day': 2, 'start_hour': 14.5,
+        #     'end_day': 4, 'end_hour': 10.0,
+        #     'nodes': ['P15'],
+        #     'coeff': 0.2,
+        # },
         # # Surconsommation sur M236 : Jour 1 de 10h à 14h
         # {
         #     'type': 'surge',
@@ -699,7 +740,7 @@ if __name__ == "__main__":
     ]
 
     # ── TUYAUX À OBSERVER (Laissez vide [] pour aléatoire) ──
-    TARGET_PIPES = ['P15']  # Exemple: ['P12', 'P45']
+    TARGET_PIPES = ['P15', 'P705']  # Exemple: ['P12', 'P45']
 
     state_file = os.path.join(base_dir, 'temp_state_realiste.json')
     csv_file = os.path.join(base_dir, 'reseau', 'Scenario 2', 'export_realiste.csv')
