@@ -1,0 +1,236 @@
+; Filename: C:/Users/ulric/Desktop/Stage/Stage_Partie2/Scenarios/Scenario_bis\High_Demand.inp
+; WNTR: 1.4.0
+; Created: 2026-07-06 14:03:29
+[TITLE]
+
+[JUNCTIONS]
+;ID                      Elevation       Demand Pattern                 
+ J1                               100               0                            ;
+ J2                               100               0                            ;
+ J3                               100               0                            ;
+ J4                               100               0                            ;
+ J5                               100               0                            ;
+ J6                               100               0                            ;
+ J7                               100               0                            ;
+ J8                               100               0                            ;
+ J9                               100               0                            ;
+ J10                              100               0                            ;
+ J11                              100               0                            ;
+ J12                              100               0                            ;
+ J13                              100               0                            ;
+ J14                              100               0                            ;
+ J15                              100               0                            ;
+ J16                              100               0                            ;
+ J17                              100               0                            ;
+ J18                              100               0                            ;
+ J19                              100               0                            ;
+ J20                              100               0                            ;
+ J21                              100               0                            ;
+ J22                              100               0                            ;
+ J23                              100               0                            ;
+ J24                              100               0                            ;
+ J25                              100               0                            ;
+ J26                              100               0                            ;
+ M1                               100           0.007                            ;
+ M2                               100           0.007                            ;
+ M3                               100           0.007                            ;
+ M4                               100           0.007                            ;
+ M5                               100           0.007                            ;
+ M6                               100           0.007                            ;
+ M7                               100           0.007                            ;
+ M8                               100           0.007                            ;
+ M9                               100           0.007                            ;
+ M10                              100           0.007                            ;
+
+[RESERVOIRS]
+;ID                                   Head                  Pattern
+ C1                               120                            ;
+
+[TANKS]
+;ID                              Elevation           Init Level            Min Level            Max Level             Diameter           Min Volume Volume Curve         Overflow            
+
+[PIPES]
+;ID                   Node1                Node2                              Length             Diameter            Roughness           Minor Loss               Status
+ P1                   J1                   J2                              54.4             180             130               0                 Open   ;
+ P2                   J2                   J6                              54.4             180             130               0                 Open   ;
+ P3                   J2                   J3                              54.4             180             130               0                 Open   ;
+ P4                   J3                   J23                             54.4             180             130               0                 Open   ;
+ P5                   J3                   J24                             54.4             180             130               0                 Open   ;
+ P6                   J4                   J22                             54.4             180             130               0                 Open   ;
+ P7                   J4                   J23                             54.4             180             130               0                 Open   ;
+ P8                   J5                   J18                             54.4             180             130               0                 Open   ;
+ P9                   J5                   J19                             54.4             180             130               0                 Open   ;
+ P10                  J6                   J10                             54.4             180             130               0                 Open   ;
+ P11                  J6                   J7                              54.4             180             130               0                 Open   ;
+ P12                  J6                   J19                             54.4             180             130               0                 Open   ;
+ P13                  C1                   J6                              54.4             300             130               0                 Open   ;
+ P14                  J7                   J11                             54.4             180             130               0                 Open   ;
+ P15                  J7                   J24                             54.4             180             130               0                 Open   ;
+ P16                  J8                   J22                             54.4             180             130               0                 Open   ;
+ P17                  J8                   J26                             54.4             180             130               0                 Open   ;
+ P18                  J9                   J18                             54.4             180             130               0                 Open   ;
+ P19                  J9                   J20                             54.4             180             130               0                 Open   ;
+ P20                  J9                   J25                             54.4             180             130               0                 Open   ;
+ P21                  J10                  J21                             54.4             180             130               0                 Open   ;
+ P22                  J10                  J25                             54.4             180             130               0                 Open   ;
+ P23                  J11                  J15                             54.4             180             130               0                 Open   ;
+ P24                  J11                  J12                             54.4             180             130               0                 Open   ;
+ P25                  J11                  J21                             54.4             180             130               0                 Open   ;
+ P26                  J12                  J17                             54.4             180             130               0                 Open   ;
+ P27                  J12                  J26                             54.4             180             130               0                 Open   ;
+ P28                  J13                  J14                             54.4             180             130               0                 Open   ;
+ P29                  J13                  J20                             54.4             180             130               0                 Open   ;
+ P30                  J14                  J15                             54.4             180             130               0                 Open   ;
+ P31                  J15                  J16                             54.4             180             130               0                 Open   ;
+ P32                  J16                  J17                             54.4             180             130               0                 Open   ;
+ P33                  J17                  M1                               5.4              60             130               0                 Open   ;
+ P34                  J18                  M2                               5.4              60             130               0                 Open   ;
+ P35                  J19                  M3                               5.4              60             130               0                 Open   ;
+ P36                  J20                  M4                               5.4              60             130               0                 Open   ;
+ P37                  J21                  M5                               5.4              60             130               0                 Open   ;
+ P38                  J22                  M6                               5.4              60             130               0                 Open   ;
+ P39                  J23                  M7                               5.4              60             130               0                 Open   ;
+ P40                  J24                  M8                               5.4              60             130               0                 Open   ;
+ P41                  J25                  M9                               5.4              60             130               0                 Open   ;
+ P42                  J26                  M10                              5.4              60             130               0                 Open   ;
+
+[PUMPS]
+;ID                   Node1                Node2                Properties          
+
+[VALVES]
+;ID                   Node1                Node2                            Diameter Type              Setting           Minor Loss
+
+[TAGS]
+;type      name       tag       
+
+[DEMANDS]
+;ID        Demand     Pattern   
+
+[STATUS]
+;ID        Setting   
+
+[PATTERNS]
+;ID        Multipliers
+
+[CURVES]
+;ID         X-Value      Y-Value     
+;UNKNOWN: CurvePump
+ CurvePump      0.000000    10.000000   ;
+ CurvePump   2500.000000     8.000000   ;
+ CurvePump   5000.000000     0.000000   ;
+
+
+[CONTROLS]
+
+[RULES]
+
+[ENERGY]
+GLOBAL EFFICIENCY      75.0000
+GLOBAL PRICE           0.0000
+DEMAND CHARGE          0.0000
+
+[EMITTERS]
+;ID        Flow coefficient
+
+[QUALITY]
+
+[SOURCES]
+;Node      Type       Quality    Pattern   
+
+[REACTIONS]
+;Type           Pipe/Tank               Coefficient
+
+ ORDER BULK 1
+ ORDER TANK 1
+ ORDER WALL 1
+ GLOBAL BULK 0.0000    
+ GLOBAL WALL 0.0000    
+ LIMITING POTENTIAL 0.0000    
+ ROUGHNESS CORRELATION 0.0000    
+
+[MIXING]
+;Tank ID             Model Fraction
+
+[TIMES]
+DURATION             00:00:00
+HYDRAULIC TIMESTEP   01:00:00
+QUALITY TIMESTEP     00:05:00
+PATTERN TIMESTEP     01:00:00
+PATTERN START        00:00:00
+REPORT TIMESTEP      01:00:00
+REPORT START         00:00:00
+START CLOCKTIME      00:00:00 AM
+RULE TIMESTEP        00:06:00
+STATISTIC            NONE      
+
+[REPORT]
+SUMMARY    NO
+PAGE       0
+
+[OPTIONS]
+UNITS                LPS                 
+HEADLOSS             H-W                 
+SPECIFIC GRAVITY     1
+VISCOSITY            1
+TRIALS               40
+ACCURACY             0.001
+CHECKFREQ            2
+MAXCHECK             10
+UNBALANCED           CONTINUE 10
+DEMAND MULTIPLIER    1
+EMITTER EXPONENT     0.5
+QUALITY              NONE                
+DIFFUSIVITY          1
+TOLERANCE            0.01
+
+[COORDINATES]
+;Node      X-Coord    Y-Coord   
+J1                584.650000000       8663.270000000
+J2               1120.390000000       5922.130000000
+J3                839.400000000       3766.150000000
+J4                500.000000000        557.120000000
+J5               3657.210000000       8975.930000000
+J6               4076.500000000       6475.640000000
+J7               4107.800000000       3430.960000000
+J8               3061.040000000        500.000000000
+J9               6385.190000000       9500.000000000
+J10              6568.610000000       6161.750000000
+J11              6045.320000000       4198.680000000
+J12              6656.680000000        866.110000000
+J13              9044.180000000       9385.920000000
+J14              9500.000000000       6264.250000000
+J15              8640.120000000       3970.910000000
+J16              8939.850000000        785.590000000
+J17              7798.270000000        825.850000000
+J18              5021.200000000       9237.960000000
+J19              3866.850000000       7725.790000000
+J20              7714.690000000       9442.960000000
+J21              6306.960000000       5180.210000000
+J22              1780.520000000        528.560000000
+J23               669.700000000       2161.630000000
+J24              2473.600000000       3598.550000000
+J25              6476.900000000       7830.880000000
+J26              4858.860000000        683.060000000
+M1               7826.370000000       1647.070000000
+M2               5171.670000000       8430.580000000
+M3               4664.720000000       7863.700000000
+M4               7680.510000000       8621.980000000
+M5               7088.210000000       4965.550000000
+M6               1798.290000000       1350.070000000
+M7               1474.430000000       2073.900000000
+M8               2392.260000000       2781.000000000
+M9               5668.800000000       7785.110000000
+M10              4778.090000000       1500.670000000
+C1               3357.150000000       7634.180000000
+
+[VERTICES]
+;Link      X-Coord    Y-Coord   
+
+[LABELS]
+
+[BACKDROP]
+DIMENSIONS    0.00    0.00    10000.00    10000.00
+UNITS    NONE
+OFFSET    0.00    0.00
+
+[END]
