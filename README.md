@@ -28,7 +28,6 @@ independent physics-based model.
 |------|------|
 | `city-pipelines/simulator.py` | Core WNTR-based simulation engine: scenario configuration and data export |
 | `city-pipelines/interface.py` | GUI for network generation; exports EPANET `.inp` files |
-| `city-pipelines/export_plots.py` | Pressure, velocity and flow plots from the exported data |
 | `plot_comparison.py` | Comparison of the WNTR output against the physical reference model |
 
 ## Installation
@@ -56,13 +55,8 @@ pip install -r requirements.txt
    python city-pipelines/simulator.py
 ```
 
-3. **Plot the results**:
 
-```bash
-   python city-pipelines/export_plots.py
-```
-
-4. **Compare with the physical model**:
+3. **Compare with the physical model**:
     
 ```bash
    python plot_comparison.py
