@@ -5,21 +5,21 @@ import math, random, networkx as nx
 from perlin_noise import PerlinNoise
 import numpy as np
 
-# Remplacement de la librairie 'noise' par 'perlin-noise' (pas réussi à lancer l'autre)
+# Replacing the 'noise' library with 'perlin-noise' (failed to launch the other)
 _noise_generator = PerlinNoise(octaves=2, seed=42)
 def pnoise2(x, y):
     # On simule le comportement de pnoise2 (valeurs entre -1 et 1)
     return _noise_generator([x, y]) * 2.0
 
 
-def get_elevation(x, y, hauteur_min=100, hauteur_max=150):
+def get_elevation(x, y, min_height=100, max_height=150):
     """
-    x, y           : coordonnées du point
-    hauteur_min    : altitude minimale (mètres)
-    hauteur_max    : altitude maximale (mètres)
+    x, y           : point coordinates
+    min_height    : minimum altitude (meters)
+    max_height    : maximum altitude (meters)
     """
     raw = pnoise2(x, y)
-    return hauteur_min + (raw + 1) / 2 * (hauteur_max - hauteur_min)
+    return min_height + (raw + 1) / 2 * (max_height - min_height)
 
 # ══════════════════════════════════════════════════════════════════
 # PALETTE
@@ -36,14 +36,14 @@ TXT_MAIN = "#dce9fb"
 TXT_SUB = "#6a93c8"
 TXT_DIM = "#3a5a8a"
 
-NODE_RES = "#e9ba0e"  # réservoir  — bleu clair
-NODE_JUNC = "#06112a"  # jonction   — bleu
-NODE_HOUSE = "#f163a3"  # maison     — indigo
-NODE_FAULT = "#ef4444"  # cassé      — rouge
+NODE_RES = "#e9ba0e"  # reservoir  — light blue
+NODE_JUNC = "#06112a"  # junction   — blue
+NODE_HOUSE = "#f163a3"  # house     — indigo
+NODE_FAULT = "#ef4444"  # broken      — red
 NODE_SURGE = "#f59e0b"  # surge      — orange
-NODE_ZERO = "#6b7280"  # pression 0 — gris
-EDGE_MAIN = "#bfc5ce"  # conduite principale
-EDGE_SEC = "#26bef0"  # conduite secondaire (vers maison)
+NODE_ZERO = "#6b7280"  # 0 pressure — gray
+EDGE_MAIN = "#bfc5ce"  # main pipe
+EDGE_SEC = "#26bef0"  # secondary pipe (to house)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -53,7 +53,7 @@ EDGE_SEC = "#26bef0"  # conduite secondaire (vers maison)
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("Réseau d'eau")
+        self.title("Water Network")
         self.geometry("1280x720")
         self.minsize(900, 500)
         self.configure(fg_color=BG_DEEP)
@@ -65,7 +65,7 @@ class App(ctk.CTk):
         self.canvas_panel()
 
     # ══════════════════════════════════════════════════════════════════
-    #  METHODES UI
+    #  UI METHODS
     # ══════════════════════════════════════════════════════════════════
 
     def topbar(self):
@@ -74,7 +74,7 @@ class App(ctk.CTk):
         top.grid_propagate(False)
         top.grid_rowconfigure(0, weight=1)
         top.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(top, text="Réseau d'eau",
+        ctk.CTkLabel(top, text="Water Network",
                      font=ctk.CTkFont(size=15, weight="bold"),
                      text_color=TXT_MAIN).grid(row=0, column=0)
 
@@ -129,7 +129,7 @@ class App(ctk.CTk):
         return sw
 
     # ══════════════════════════════════════════════════════════════════
-    #  FORMULAIRE
+    #  FORM
     # ══════════════════════════════════════════════════════════════════
 
     def main(self):
@@ -149,17 +149,17 @@ class App(ctk.CTk):
         self.optmenus = {}
         self.switches = {}
 
-        row_idx = self.section(scroll, row_idx, "01", "Paramètres")
+        row_idx = self.section(scroll, row_idx, "01", "Parameters")
         f1 = ctk.CTkFrame(scroll, corner_radius=12, fg_color=BG_CARD, border_width=1, border_color=BORDER)
         f1.grid(row=row_idx, column=0, padx=20, pady=(0, 12), sticky="ew")
         f1.grid_columnconfigure((0, 1), weight=1)
         row_idx += 1
         for i, (key, label, ph) in enumerate([
-            ("Nombre de maisons", "Nombre de maisons", "ex : 10"),
-            ("Nombre de chateaux d'eau", "Nombre de chateaux d'eau", "ex : 5"),
-            ("Dénivelé", "Dénivelé", "en %"),
-            ("Hauteur min","Hauteur min", "en m"),
-            ("Hauteur max", "Hauteur max", "en m"),
+            ("Number of houses", "Number of houses", "ex: 10"),
+            ("Number of water towers", "Number of water towers", "ex: 5"),
+            ("Elevation gain", "Elevation gain", "in %"),
+            ("Min height","Min height", "in m"),
+            ("Max height", "Max height", "in m"),
         ]):
             self.entries[key] = self.field(f1, i // 2, i % 2, label, ph)
 
@@ -168,49 +168,49 @@ class App(ctk.CTk):
         f2.grid(row=row_idx, column=0, padx=20, pady=(0, 12), sticky="ew")
         f2.grid_columnconfigure((0, 1), weight=1)
         row_idx += 1
-        self.optmenus["Zone"] = self._optmenu(f2, 0, 0, "Type de zone", ["Rurale", "Urbaine"])
-        self.entries["Surface"] = self.field(f2, 0, 1, "Surface", "en km²")
+        self.optmenus["Zone"] = self._optmenu(f2, 0, 0, "Zone type", ["Rural", "Urban"])
+        self.entries["Area"] = self.field(f2, 0, 1, "Area", "in km²")
 
-        row_idx = self.section(scroll, row_idx, "03", "Conduites")
+        row_idx = self.section(scroll, row_idx, "03", "Pipes")
         f3 = ctk.CTkFrame(scroll, corner_radius=12, fg_color=BG_CARD, border_width=1, border_color=BORDER)
         f3.grid(row=row_idx, column=0, padx=20, pady=(0, 12), sticky="ew")
         f3.grid_columnconfigure((0, 1), weight=1)
         row_idx += 1
         self.optmenus["Formule pertes"] = self._optmenu(
-            f3, 0, 0, "Formule pertes de charge", ["Darcy-Weisbach", "Hazen-Williams"])
-        self.entries["Rugosité"] = self.field(f3, 0, 1, "Rugosité", "D-W: 0.02 | H-W: 130")
-        self.entries["Diamètre min"] = self.field(f3, 1, 0, "Diamètre min (mm)", "ex : 60")
-        self.entries["Diamètre max"] = self.field(f3, 1, 1, "Diamètre max (mm)", "ex : 300")
+            f3, 0, 0, "Head loss formula", ["Darcy-Weisbach", "Hazen-Williams"])
+        self.entries["Roughness"] = self.field(f3, 0, 1, "Roughness", "D-W: 0.02 | H-W: 130")
+        self.entries["Diamètre min"] = self.field(f3, 1, 0, "Min diameter (mm)", "ex: 60")
+        self.entries["Diamètre max"] = self.field(f3, 1, 1, "Max diameter (mm)", "ex: 300")
 
         row_idx = self.section(scroll, row_idx, "04", "Simulation")
         f5 = ctk.CTkFrame(scroll, corner_radius=12, fg_color=BG_CARD, border_width=1, border_color=BORDER)
         f5.grid(row=row_idx, column=0, padx=20, pady=(0, 12), sticky="ew")
         f5.grid_columnconfigure((0, 1), weight=1)
         row_idx += 1
-        self.optmenus["Mode simulation"] = self._optmenu(
-            f5, 0, 0, "Mode", ["Statique (0h)", "Dynamique (24h)", "Personnalisé"])
-        self.entries["Durée"] = self.field(f5, 0, 1, "Durée (h)", "ex : 12")
+        self.optmenus["Simulation mode"] = self._optmenu(
+            f5, 0, 0, "Mode", ["Static (0h)", "Dynamic (24h)", "Custom"])
+        self.entries["Durée"] = self.field(f5, 0, 1, "Duration (h)", "ex: 12")
 
-        row_idx = self.section(scroll, row_idx, "05", "Capteurs & Bruit")
+        row_idx = self.section(scroll, row_idx, "05", "Sensors & Noise")
         f6 = ctk.CTkFrame(scroll, corner_radius=12, fg_color=BG_CARD, border_width=1, border_color=BORDER)
         f6.grid(row=row_idx, column=0, padx=20, pady=(0, 12), sticky="ew")
         f6.grid_columnconfigure((0, 1), weight=1)
         row_idx += 1
-        self.switches["Bruit"] = self._switch(f6, 0, 0, "Activer le bruit gaussien", command=self.toggle_bruit)
-        self.entries["Écart-type"] = self.field(f6, 0, 1, "Écart-type bruit", "ex : 0.05")
-        self.entries["% cassés"] = self.field(f6, 1, 0, "% capteurs cassés", "ex : 10")
+        self.switches["Bruit"] = self._switch(f6, 0, 0, "Enable Gaussian noise", command=self.toggle_noise)
+        self.entries["Écart-type"] = self.field(f6, 0, 1, "Noise standard deviation", "ex: 0.05")
+        self.entries["% cassés"] = self.field(f6, 1, 0, "% broken sensors", "ex: 10")
         self.entries["Écart-type"].configure(state="disabled")
 
         btn_frame = ctk.CTkFrame(scroll, corner_radius=0, fg_color="transparent")
         btn_frame.grid(row=row_idx, column=0, padx=20, pady=(8, 28), sticky="ew")
         btn_frame.grid_columnconfigure((0, 1), weight=1)
 
-        ctk.CTkButton(btn_frame, text="Générer réseau", height=48, corner_radius=12,
+        ctk.CTkButton(btn_frame, text="Generate network", height=48, corner_radius=12,
                       font=ctk.CTkFont(size=14, weight="bold"),
                       fg_color=ACCENT, hover_color=ACCENT_HVR, text_color="#ffffff",
                       command=self.on_ok).grid(row=0, column=0, padx=(0, 6), sticky="ew")
 
-        ctk.CTkButton(btn_frame, text="Aléatoire", height=48, corner_radius=12,
+        ctk.CTkButton(btn_frame, text="Random", height=48, corner_radius=12,
                       font=ctk.CTkFont(size=14, weight="bold"),
                       fg_color=BG_CARD, hover_color=BORDER, text_color=TXT_SUB,
                       border_width=1, border_color=BORDER,
@@ -236,21 +236,21 @@ class App(ctk.CTk):
         bar.grid_columnconfigure(0, weight=1)
 
         self._info_label = ctk.CTkLabel(
-            bar, text="Générez un réseau puis cliquez sur un nœud",
+            bar, text="Generate a network then click on a node",
             font=ctk.CTkFont(size=11), text_color=TXT_MAIN)
         self._info_label.grid(row=0, column=0, sticky="w", padx=16)
 
-        ctk.CTkButton(bar, text="Exporter .inp", width=120, height=30, corner_radius=8,
+        ctk.CTkButton(bar, text="Export .inp", width=120, height=30, corner_radius=8,
                       font=ctk.CTkFont(size=11, weight="bold"),
                       fg_color=ACCENT, hover_color=ACCENT_HVR,
                       command=self.export_inp).grid(row=0, column=1, padx=6)
 
-        ctk.CTkButton(bar, text="Exporter Image", width=120, height=30, corner_radius=8,
+        ctk.CTkButton(bar, text="Export Image", width=120, height=30, corner_radius=8,
                       font=ctk.CTkFont(size=11, weight="bold"),
                       fg_color="#8e44ad", hover_color="#9b59b6",
                       command=self.export_image).grid(row=0, column=2, padx=6)
 
-        ctk.CTkButton(bar, text="Reset fautes", width=110, height=30, corner_radius=8,
+        ctk.CTkButton(bar, text="Reset faults", width=110, height=30, corner_radius=8,
                       font=ctk.CTkFont(size=11), fg_color=BG_CARD, hover_color=BORDER,
                       border_width=1, border_color=BORDER, text_color=TXT_SUB,
                       command=self.reset_faults).grid(row=0, column=3, padx=(0, 10))
@@ -261,17 +261,17 @@ class App(ctk.CTk):
         self.cv.bind("<Button-1>", self._on_click)
         self.cv.bind("<Configure>", lambda e: self._redraw())
 
-        # légende
+        # legend
         leg = ctk.CTkFrame(right, height=36, corner_radius=0, fg_color=BG_DEEP)
         leg.grid(row=2, column=0, sticky="ew")
         leg.grid_propagate(False)
         for col, txt in [
-            ("#0B97F4", "Chateau d'eau"),
-            ("#11D454", "Jonction"),
-            (NODE_HOUSE, "Maison"),
-            (NODE_FAULT, "Capteur cassé"),
-            (NODE_SURGE, "Demande ×5"),
-            (NODE_ZERO, "Fuite"),
+            ("#0B97F4", "Water tower"),
+            ("#11D454", "Junction"),
+            (NODE_HOUSE, "House"),
+            (NODE_FAULT, "Broken sensor"),
+            (NODE_SURGE, "Demand ×5"),
+            (NODE_ZERO, "Leak"),
         ]:
             f = ctk.CTkFrame(leg, fg_color="transparent")
             f.pack(side="left", padx=10)
@@ -285,7 +285,7 @@ class App(ctk.CTk):
         self._params = {}
 
     # ══════════════════════════════════════════════════════════════════
-    #  CONSTRUCTION DU RESEAU
+    #  NETWORK CONSTRUCTION
     # ══════════════════════════════════════════════════════════════════
 
     def _build_graph(self, params):
@@ -295,22 +295,22 @@ class App(ctk.CTk):
         import numpy as np
 
         try:
-            n_maisons = int(params.get("n_maisons", 10))
+            n_houses = int(params.get("n_houses", 10))
         except:
-            n_maisons = 10
+            n_houses = 10
             
         try:
-            n_chateaux = int(params.get("n_chateaux", 1))
+            n_towers = int(params.get("n_towers", 1))
         except:
-            n_chateaux = 1
+            n_towers = 1
 
-        zone = params.get("Zone", "Urbaine")
+        zone = params.get("Zone", "Urban")
         
         G = nx.Graph()
         pos = {}
         
-        if zone == "Urbaine":
-            n_cells = max(1, int(math.ceil(math.sqrt(n_maisons * 1.5))))
+        if zone == "Urban":
+            n_cells = max(1, int(math.ceil(math.sqrt(n_houses * 1.5))))
             grid = nx.grid_2d_graph(n_cells, n_cells)
             cell_size = 1.6 / max(1, (n_cells - 1))
             
@@ -339,10 +339,10 @@ class App(ctk.CTk):
             
             edges_list = list(G.edges())
             random.shuffle(edges_list)
-            while len(edges_list) < n_maisons: edges_list.extend(edges_list)
+            while len(edges_list) < n_houses: edges_list.extend(edges_list)
                 
             j_count = len(G.nodes())
-            for i in range(n_maisons):
+            for i in range(n_houses):
                 u, v = edges_list[i]
                 if G.has_edge(u, v): G.remove_edge(u, v)
                 j_count += 1
@@ -364,19 +364,19 @@ class App(ctk.CTk):
             junction_nodes = [n for n in G.nodes() if G.nodes[n].get("type") == "junction"]
             if not junction_nodes: junction_nodes = list(G.nodes())
             
-            for i in range(n_chateaux):
+            for i in range(n_towers):
                 u = random.choice(junction_nodes)
-                c_new = f"C{i+1}"
-                G.add_node(c_new, type="chateau")
-                G.add_edge(u, c_new)
+                t_new = f"T{i+1}"
+                G.add_node(t_new, type="tower")
+                G.add_edge(u, t_new)
                 vec = pos[u]
                 if np.linalg.norm(vec) > 0: vec = vec / np.linalg.norm(vec)
                 else: vec = np.array([1.0, 0.0])
-                pos[c_new] = pos[u] + vec * cell_size * 0.5
+                pos[t_new] = pos[u] + vec * cell_size * 0.5
                 
         else:
             # 1. Create a spine (Main Road)
-            n_spine = max(3, n_maisons // 3)
+            n_spine = max(3, n_houses // 3)
             spine_len = 2.0
             seg_len = spine_len / n_spine
             
@@ -396,7 +396,7 @@ class App(ctk.CTk):
                 current_y += random.uniform(-0.1, 0.1) # Wavy road
                 
             # 2. Add some branches (Ribs)
-            n_branches = max(1, n_maisons // 5)
+            n_branches = max(1, n_houses // 5)
             branch_nodes = list(spine_nodes[1:-1]) # avoid branches at extreme ends
             if not branch_nodes: branch_nodes = spine_nodes
             random.shuffle(branch_nodes)
@@ -428,11 +428,11 @@ class App(ctk.CTk):
 
             # 3. Distribute houses on all_edges
             random.shuffle(all_edges)
-            while len(all_edges) < n_maisons:
+            while len(all_edges) < n_houses:
                 all_edges.extend(all_edges) # duplicate edges if needed
                 
             j_s_count = 0
-            for i in range(n_maisons):
+            for i in range(n_houses):
                 u, v = all_edges[i]
                 if G.has_edge(u, v):
                     G.remove_edge(u, v)
@@ -462,19 +462,19 @@ class App(ctk.CTk):
                 else:
                     all_edges[i] = (j_new, v)
                     
-            # 4. Add chateaux randomly across the village
+            # 4. Add towers randomly across the village
             junction_nodes = [n for n in G.nodes() if G.nodes[n].get('type') == 'junction']
             if not junction_nodes: junction_nodes = list(G.nodes())
             random.shuffle(junction_nodes)
             
-            for i in range(n_chateaux):
+            for i in range(n_towers):
                 u = junction_nodes[i % len(junction_nodes)]
-                c_new = f'C{i+1}'
-                G.add_node(c_new, type='chateau')
-                G.add_edge(u, c_new)
+                t_new = f'T{i+1}'
+                G.add_node(t_new, type='tower')
+                G.add_edge(u, t_new)
                 
                 neighbors = list(G.neighbors(u))
-                if neighbors and neighbors[0] != c_new:
+                if neighbors and neighbors[0] != t_new:
                     vec = pos[u] - pos[neighbors[0]]
                     if np.linalg.norm(vec) > 0:
                         vec = vec / np.linalg.norm(vec)
@@ -483,7 +483,7 @@ class App(ctk.CTk):
                 else:
                     vec = np.array([1.0, 0.0])
                     
-                pos[c_new] = pos[u] + vec * 0.2
+                pos[t_new] = pos[u] + vec * 0.2
 
         w = max(self.cv.winfo_width(), 200)
         h = max(self.cv.winfo_height(), 200)
@@ -506,9 +506,9 @@ class App(ctk.CTk):
             pos[i][0] = margin_x + px * (w - 2 * margin_x)
             pos[i][1] = margin_y + py * (h - 2 * margin_y)
 
-        # Assign broken sensors based on pct_casses
+        # Assign broken sensors based on pct_broken
         try:
-            pct_broken = float(params.get("pct_casses", 0))
+            pct_broken = float(params.get("pct_broken", 0))
         except:
             pct_broken = 0.0
 
@@ -523,7 +523,7 @@ class App(ctk.CTk):
         return pos
 
     # ══════════════════════════════════════════════════════════════════
-    #  DESSIN
+    #  DRAWING
     # ══════════════════════════════════════════════════════════════════
 
     def _redraw(self):
@@ -533,24 +533,24 @@ class App(ctk.CTk):
 
         self.cv.delete("all")
 
-        # 1. Fond couleur "papier ancien"
+        # 1. Color background "old paper"
         self.cv.config(bg='#fdfcf5')
 
         # Removed re-building graph during redraw
         self._node_items = {}
 
-        # 2. Arêtes (Tuyaux) — dessinés en premier pour être en dessous
+        # 2. Edges (Pipes) — drawn first to be underneath
         for u, v, d in self._G.edges(data=True):
             x1, y1 = self._pos_px[u]
             x2, y2 = self._pos_px[v]
 
-            # Si tu as défini des tuyaux secondaires (ex: vers les maisons)
+            # If you defined secondary pipes (ex: towards houses)
             if d.get("etype") == "secondary":
                 self.cv.create_line(x1, y1, x2, y2, fill='#4682B4', width=1.5)
             else:
                 self.cv.create_line(x1, y1, x2, y2, fill='#4682B4', width=2.5)
 
-        # 3. Nœuds
+        # 3. Nodes
         for node in self._G.nodes():
             self._draw_node(node)
 
@@ -563,18 +563,18 @@ class App(ctk.CTk):
         self.cv.delete(f"node_{node}")
         self.cv.delete(f"label_{node}")
 
-        # --- GESTION DES COULEURS ET ÉTATS ---
+        # --- COLOR AND STATE MANAGEMENT ---
         if state != "normal":
-            # Garde tes couleurs d'erreur si la simulation tourne (à définir dans tes constantes)
+            # Keep your error colors if the simulation is running (to be defined in your constants)
             color = {"broken": "red", "surge": "orange", "zero": "black"}.get(state, "red")
         else:
-            # Nos couleurs "design" pour le fonctionnement normal
-            color = {"chateau": "#0B97F4", "connection": "gray", "house": "#CD5C5C"}.get(ntype, "#11D454")
+            # Our "design" colors for normal operation
+            color = {"tower": "#0B97F4", "connection": "gray", "house": "#CD5C5C"}.get(ntype, "#11D454")
 
-        # --- DESSIN SELON LE TYPE ---
+        # --- DRAWING SELON LE TYPE ---
 
-        if ntype == "chateau":
-            # Réservoir : Grand carré bleu foncé
+        if ntype == "tower":
+            # Reservoir: Large dark blue square
             r = 15
             self.cv.create_rectangle(x - r, y - r, x + r, y + r,
                                      fill=color, outline="#0B97F4", width=2,
@@ -584,26 +584,26 @@ class App(ctk.CTk):
                                 tags=f"label_{node}")
 
         elif ntype == "connection":
-            # Branchements (B1, B2...) : Petit point gris discret, SANS texte
+            # Connections (B1, B2...): Small discreet gray point, NO text
             r = 3
             self.cv.create_oval(x - r, y - r, x + r, y + r,
                                 fill=color, outline=color,
                                 tags=(f"node_{node}", "node"))
 
         elif ntype == "house":
-            # Maisons (M1, M2...) : Gros rond rouge, texte BLANC au centre
+            # Houses (M1, M2...) : Gros rond rouge, texte BLANC au centre
             r = 12
             self.cv.create_oval(x - r, y - r, x + r, y + r,
                                 fill=color, outline='black', width=1,
                                 tags=(f"node_{node}", "node"))
 
-            # Nom de la maison à l'intérieur du rond (ex: "M1")
+            # House name inside the circle (ex: "M1")
             self.cv.create_text(x, y, text=node,
                                 fill='white', font=("Arial", 8, "bold"),
                                 tags=f"label_{node}")
 
         else:
-            # Carrefours / Junctions (N1, N2...) : AUCUN point dessiné, JUSTE le texte
+            # Crossroads / Junctions (N1, N2...): NO point drawn, JUST text
 
             r = 5
             self.cv.create_rectangle(x - r, y - r, x + r, y + r,
@@ -615,21 +615,21 @@ class App(ctk.CTk):
 
     def _draw_empty(self):
         self.cv.delete("all")
-        # On récupère la taille actuelle du canvas
+        # Get the current size of the canvas
         w = max(self.cv.winfo_width(), 200)
         h = max(self.cv.winfo_height(), 200)
 
-        # On écrit le message au centre
+        # Write the message in the center
         self.cv.create_text(
             w // 2, h // 2,
-            text=" Réseau non généré\n\nConfigurez les paramètres à gauche\npuis cliquez sur 'Générer réseau'",
+            text=" Réseau non généré\n\nConfigurez les paramètres à gauche\npuis cliquez sur 'Generate network'",
             fill=TXT_MAIN,
             font=("Arial", 12, "italic"),
             justify="center"
         )
 
     # ================================================
-    #  CLIC → INJECTION DE FAUTE
+    #  CLICK -> FAULT INJECTION
     # ================================================
 
     def _on_click(self, event):
@@ -640,7 +640,7 @@ class App(ctk.CTk):
             if d < min_dist:
                 min_dist, closest = d, node
 
-        # seuil adapté : maisons plus petites → seuil plus tolérant
+        # adapted threshold: smaller houses -> more tolerant threshold
         thresh = 20 if self._G.nodes[closest].get("type") == "house" else 28
         if min_dist > thresh: return
         self._show_fault_popup(closest)
@@ -648,23 +648,23 @@ class App(ctk.CTk):
     def _show_fault_popup(self, node):
         ntype = self._G.nodes[node].get("type", "junction")
         popup = ctk.CTkToplevel(self)
-        popup.title(f"{'Maison' if ntype == 'house' else 'Nœud'}  {node}")
+        popup.title(f"{'House' if ntype == 'house' else 'Nœud'}  {node}")
         popup.geometry("290x280")
         popup.resizable(False, False)
         popup.configure(fg_color=BG_CARD)
         popup.grab_set()
 
         ctk.CTkLabel(popup,
-                     text=f"{'🏠 Maison' if ntype == 'house' else '● Jonction'}  {node}",
+                     text=f"{'🏠 House' if ntype == 'house' else '● Junction'}  {node}",
                      font=ctk.CTkFont(size=13, weight="bold"),
                      text_color=TXT_MAIN).pack(pady=(18, 4))
 
         if ntype == "house":
             parent = self._G.nodes[node].get("parent", "?")
-            ctk.CTkLabel(popup, text=f"Rattachée à la jonction {parent}",
+            ctk.CTkLabel(popup, text=f"Attached to junction {parent}",
                          font=ctk.CTkFont(size=10), text_color=TXT_DIM).pack(pady=(0, 4))
 
-        ctk.CTkLabel(popup, text=f"État actuel : {self._node_state.get(node, 'normal')}",
+        ctk.CTkLabel(popup, text=f"Current state: {self._node_state.get(node, 'normal')}",
                      font=ctk.CTkFont(size=10), text_color=TXT_SUB).pack(pady=(0, 10))
 
         def apply(new_state):
@@ -672,14 +672,14 @@ class App(ctk.CTk):
             self._draw_node(node)
             color = NODE_FAULT if new_state != "normal" else "#3dba6f"
             self._info_label.configure(
-                text=f"Faute « {new_state} » → {node}", text_color=color)
+                text=f"Fault '{new_state}' -> {node}", text_color=color)
             popup.destroy()
 
         for label, state_key, border in [
             (" Normal", "normal", ACCENT),
-            (" Capteur cassé", "broken", NODE_FAULT),
-            (" Demande × 5", "surge", NODE_SURGE),
-            (" Fuite", "zero", NODE_ZERO),
+            (" Broken sensor", "broken", NODE_FAULT),
+            (" Demand × 5", "surge", NODE_SURGE),
+            (" Leak", "zero", NODE_ZERO),
         ]:
             ctk.CTkButton(popup, text=label, height=36, corner_radius=8,
                           font=ctk.CTkFont(size=12), fg_color=BG_INPUT,
@@ -688,56 +688,56 @@ class App(ctk.CTk):
                           command=lambda s=state_key: apply(s)).pack(fill="x", padx=20, pady=3)
 
     # ======================================
-    #  CALLBACKS FORMULAIRE
+    #  CALLBACKS FORM
     # ======================================
 
-    def toggle_bruit(self):
+    def toggle_noise(self):
         self.entries["Écart-type"].configure(
             state="normal" if self.switches["Bruit"].get() else "disabled")
 
     def _collect(self):
         return {
-            "n_maisons": self.entries["Nombre de maisons"].get(),
-            "n_chateaux": self.entries["Nombre de chateaux d'eau"].get(),
-            "denivele": self.entries["Dénivelé"].get(),
+            "n_houses": self.entries["Number of houses"].get(),
+            "n_towers": self.entries["Number of water towers"].get(),
+            "elevation_gain": self.entries["Elevation gain"].get(),
             "Zone": self.optmenus["Zone"].get(),
-            "surface": self.entries["Surface"].get(),
+            "area": self.entries["Area"].get(),
             "formule": self.optmenus["Formule pertes"].get(),
-            "rugosite": self.entries["Rugosité"].get(),
+            "roughness": self.entries["Roughness"].get(),
             "diam_min": self.entries["Diamètre min"].get(),
             "diam_max": self.entries["Diamètre max"].get(),
-            "mode_sim": self.optmenus["Mode simulation"].get(),
-            "duree": self.entries["Durée"].get(),
-            "bruit": self.switches["Bruit"].get(),
-            "ecart_type": self.entries["Écart-type"].get(),
-            "pct_casses": self.entries["% cassés"].get(),
-            "Hauteur min": self.entries["Hauteur min"].get(),
-            "Hauteur max": self.entries["Hauteur max"].get(),
+            "sim_mode": self.optmenus["Simulation mode"].get(),
+            "duration": self.entries["Durée"].get(),
+            "noise": self.switches["Bruit"].get(),
+            "std_dev": self.entries["Écart-type"].get(),
+            "pct_broken": self.entries["% cassés"].get(),
+            "Min height": self.entries["Min height"].get(),
+            "Max height": self.entries["Max height"].get(),
 
         }
 
     def on_ok(self):
         params = self._collect()
 
-        # Vérifier nombre de châteaux
+        # Check number of towers
         try:
-            int(params["n_chateaux"])
+            int(params["n_towers"])
         except (ValueError, KeyError):
-            self.feedback.configure(text="Nombre de chateaux d'eau invalide", text_color=NODE_FAULT)
+            self.feedback.configure(text="Number of water towers invalide", text_color=NODE_FAULT)
             return
 
-        # Vérifier hauteurs
+        # Check heights
         try:
-            h_min_val = params.get("Hauteur min", "").strip()
-            h_max_val = params.get("Hauteur max", "").strip()
-            hauteur_min = int(h_min_val) if h_min_val else 10
-            hauteur_max = int(h_max_val) if h_max_val else 30
+            h_min_val = params.get("Min height", "").strip()
+            h_max_val = params.get("Max height", "").strip()
+            min_height = int(h_min_val) if h_min_val else 10
+            max_height = int(h_max_val) if h_max_val else 30
 
-            if hauteur_min > hauteur_max:
+            if min_height > max_height:
                 raise ValueError("Incohérence")
 
         except ValueError:
-            self.feedback.configure(text="Hauteurs incohérentes", text_color=NODE_FAULT)
+            self.feedback.configure(text="Inconsistent heights", text_color=NODE_FAULT)
             return
         self._params = params
         self._G, self._pos_px = self._build_graph(params)
@@ -746,43 +746,43 @@ class App(ctk.CTk):
 
         n_houses = sum(1 for _, d in self._G.nodes(data=True) if d.get("type") == "house")
         self.feedback.configure(
-            text=f"✓  {self._G.number_of_nodes()} nœuds "
-                 f"({n_houses} maisons · {self._G.number_of_edges()} conduites)",
+            text=f"✓  {self._G.number_of_nodes()} nodes "
+                 f"({n_houses} houses · {self._G.number_of_edges()} pipes)",
             text_color="#3dba6f")
         self._info_label.configure(
-            text="Cliquez sur une maison ou une jonction pour injecter une faute",
+            text="Click on a house or junction to inject a fault",
             text_color=TXT_MAIN)
 
     def on_random(self):
         rng = random.Random()
         rand_params = {
-            "Nombre de maisons": str(rng.randint(50, 200)),
-            "Nombre de chateaux d'eau": str(rng.randint(1, 5)),
-            "Dénivelé": str(rng.randint(10, 50)),
-            "Rugosité": str(round(rng.uniform(0.01, 0.05), 3)),
+            "Number of houses": str(rng.randint(50, 200)),
+            "Number of water towers": str(rng.randint(1, 5)),
+            "Elevation gain": str(rng.randint(10, 50)),
+            "Roughness": str(round(rng.uniform(0.01, 0.05), 3)),
             "Diamètre min": str(rng.choice([50, 80, 100])),
             "Diamètre max": str(rng.choice([200, 250, 300])),
             "Durée": str(rng.choice([0, 6, 12, 24])),
             "% cassés": str(rng.randint(0, 20)),
-            "Hauteur min": str(rng.choice([10, 50, 100])),
-            "Hauteur max": str(rng.choice([120, 130, 140])),
+            "Min height": str(rng.choice([10, 50, 100])),
+            "Max height": str(rng.choice([120, 130, 140])),
         }
         for key, val in rand_params.items():
             e = self.entries[key]
             e.configure(state="normal")
             e.delete(0, "end")
             e.insert(0, val)
-        self.optmenus["Zone"].set(rng.choice(["Rurale", "Urbaine"]))
+        self.optmenus["Zone"].set(rng.choice(["Rural", "Urban"]))
         self.optmenus["Formule pertes"].set("Darcy-Weisbach")
-        self.optmenus["Mode simulation"].set(rng.choice(["Statique (0h)", "Dynamique (24h)"]))
-        self.feedback.configure(text="🎲  Valeurs aléatoires générées", text_color="#3dba6f")
+        self.optmenus["Simulation mode"].set(rng.choice(["Static (0h)", "Dynamic (24h)"]))
+        self.feedback.configure(text="🎲  Random values generated", text_color="#3dba6f")
         self.on_ok()
 
     def reset_faults(self):
         if not self._G: return
         self._node_state = {n: "normal" for n in self._G.nodes()}
         self._redraw()
-        self._info_label.configure(text="Fautes réinitialisées", text_color=TXT_DIM)
+        self._info_label.configure(text="Faults reset", text_color=TXT_DIM)
 
     # =======================
     #  EXPORT .INP
@@ -790,11 +790,11 @@ class App(ctk.CTk):
 
     def export_inp(self):
         if not self._G:
-            self.feedback.configure(text="⚠  Générez d'abord un réseau", text_color=NODE_FAULT)
+            self.feedback.configure(text="⚠  Generate a network first", text_color=NODE_FAULT)
             return
         path = filedialog.asksaveasfilename(
             defaultextension=".inp",
-            filetypes=[("EPANET Input File", "*.inp"), ("Tous", "*.*")])
+            filetypes=[("EPANET Input File", "*.inp"), ("All", "*.*")])
         if not path: return
         with open(path, "w", encoding="utf-8") as f:
             f.write("\n".join(self._build_inp()))
@@ -802,7 +802,7 @@ class App(ctk.CTk):
         try:
             import os
             from optimize_network import optimize_network, modify_global_demand, restore_original_demands
-            self.feedback.configure(text=f"⚙  Génération des scénarios et Optimisation...", text_color="#f39c12")
+            self.feedback.configure(text=f"⚙  Generating scenarios and Optimizing...", text_color="#f39c12")
             self.update()
             
             base_dir = os.path.dirname(path)
@@ -815,30 +815,30 @@ class App(ctk.CTk):
             peak_demand = max(5.0, n_houses * 0.5)
             modify_global_demand(path, high_opt, demand_change_L_s=peak_demand)
             
-            # 2. Optimisation sur High Demand (au moins 2.0 bars)
+            # 2. Optimization on High Demand (at least 2.0 bars)
             optimize_network(high_opt, high_opt, min_pressure_bars=2.0)
             
-            # 3. Création de Low Demand (demandes de base avec le réseau optimisé)
+            # 3. Creation of Low Demand (base demands with the optimized network)
             restore_original_demands(high_opt, path, low_opt)
             
-            # 4. Remplacer le fichier de base par le réseau optimisé (Nominal)
+            # 4. Replace the base file with the optimized network (Nominal)
             restore_original_demands(high_opt, path, path)
             
-            self.feedback.configure(text=f"✓  Exporté : {basename} + Low/High Demand", text_color="#3dba6f")
+            self.feedback.configure(text=f"✓  Exported: {basename} + Low/High Demand", text_color="#3dba6f")
         except Exception as e:
-            self.feedback.configure(text=f"⚠  Erreur lors de l'optimisation : {e}", text_color="#e74c3c")
-            print(f"Erreur d'optimisation : {e}")
+            self.feedback.configure(text=f"⚠  Error during optimization : {e}", text_color="#e74c3c")
+            print(f"Optimization error : {e}")
 
     def export_image(self):
         if not self._G:
-            self.feedback.configure(text="⚠  Générez d'abord un réseau", text_color="#e74c3c")
+            self.feedback.configure(text="⚠  Generate a network first", text_color="#e74c3c")
             return
         path = filedialog.asksaveasfilename(
             defaultextension=".svg",
-            filetypes=[("SVG Vector Image", "*.svg"), ("PNG High Res Image", "*.png"), ("PDF Document", "*.pdf"), ("Tous", "*.*")])
+            filetypes=[("SVG Vector Image", "*.svg"), ("PNG High Res Image", "*.png"), ("PDF Document", "*.pdf"), ("All", "*.*")])
         if not path: return
         
-        self.feedback.configure(text="⚙  Génération de l'image haute résolution...", text_color="#f39c12")
+        self.feedback.configure(text="⚙  Generating high resolution image...", text_color="#f39c12")
         self.update()
         
         try:
@@ -851,7 +851,7 @@ class App(ctk.CTk):
             sizes = []
             for n in self._G.nodes():
                 t = self._G.nodes[n].get("type", "junction")
-                if t == "chateau":
+                if t == "tower":
                     colors.append("#2980b9")
                     sizes.append(400)
                 elif t == "house":
@@ -865,7 +865,7 @@ class App(ctk.CTk):
                     
             nx.draw(self._G, pos_plt, node_color=colors, node_size=sizes, edge_color="#34495e", width=1.0, with_labels=True, font_size=8, font_color="black")
             
-            # Ajouter le nom des tuyaux (arêtes)
+            # Add pipe names (edges)
             edge_labels = {}
             for k, (u, v, ed) in enumerate(self._G.edges(data=True)):
                 edge_labels[(u, v)] = f"P{k + 1}"
@@ -878,54 +878,54 @@ class App(ctk.CTk):
                 
             plt.close()
             
-            self.feedback.configure(text=f"✓  Image enregistrée : {path.split('/')[-1]}", text_color="#3dba6f")
+            self.feedback.configure(text=f"✓  Image saved : {path.split('/')[-1]}", text_color="#3dba6f")
         except Exception as e:
-            self.feedback.configure(text=f"⚠  Erreur lors de l'export : {e}", text_color="#e74c3c")
-            print(f"Erreur export image : {e}")
+            self.feedback.configure(text=f"⚠  Error during export : {e}", text_color="#e74c3c")
+            print(f"Image export error : {e}")
 
     def _build_inp(self):
         p = self._params
         lines = []
         w = lines.append
 
-        conso = {"Rurale": 0.2, "Urbaine": 0.2}.get(p.get("zone", "Rurale"), 0.2)
+        consumption = {"Rural": 0.2, "Urban": 0.2}.get(p.get("zone", "Rural"), 0.2)
         try:
-            denivele = float(p.get("denivele", 0))
+            elevation_gain = float(p.get("elevation_gain", 0))
         except:
-            denivele = 0.0
+            elevation_gain = 0.0
         try:
-            rug = float(p.get("rugosite", 130.0))
+            rug = float(p.get("roughness", 130.0))
         except:
             rug = 130.0
         if rug < 1.0:
             rug = 130.0
         try:
-            surface = float(p.get("surface", 2.0))
+            area = float(p.get("area", 2.0))
         except:
-            surface = 2.0
+            area = 2.0
         try:
-            h_min_val = p.get("Hauteur min", "").strip()
-            hauteur_min = float(h_min_val) if h_min_val else 10.0
+            h_min_val = p.get("Min height", "").strip()
+            min_height = float(h_min_val) if h_min_val else 10.0
         except ValueError:
-            hauteur_min = 10.0
+            min_height = 10.0
             
         try:
-            h_max_val = p.get("Hauteur max", "").strip()
-            hauteur_max = float(h_max_val) if h_max_val else 30.0
+            h_max_val = p.get("Max height", "").strip()
+            max_height = float(h_max_val) if h_max_val else 30.0
         except ValueError:
-            hauteur_max = 30.0
+            max_height = 30.0
 
-        # demande individuelle par maison en L/s (débit instantané pour simulation transitoire)
-        demande_maison = 0.007
+        # individual demand per house in L/s (instantaneous flow for transient simulation)
+        house_demand = 0.007
 
-        fautes = [n for n, s in self._node_state.items() if s != "normal"]
+        faults = [n for n, s in self._node_state.items() if s != "normal"]
 
         w("[TITLE]")
-        w(f"; Zone={p.get('zone')} | Maisons={p.get('n_maisons')} | Chateaux d'eau={p.get('n_chateaux')}")
-        w(f"; Fautes actives : {fautes if fautes else 'aucune'}")
+        w(f"; Zone={p.get('zone')} | Houses={p.get('n_houses')} | Towerx d'eau={p.get('n_towers')}")
+        w(f"; Fautes actives : {faults if faults else 'aucune'}")
         w("")
 
-        # jonctions + maisons dans [JUNCTIONS]
+        # junctions + houses in [JUNCTIONS]
         w("[JUNCTIONS]")
         w(";ID              \tElev        \tDemand      \tPattern")
 
@@ -937,10 +937,10 @@ class App(ctk.CTk):
             pos_xy = self._pos_px.get(node)
             if pos_xy is not None:
                 x, y = pos_xy
-                elev = round(get_elevation(x / 800.0, y / 800.0, hauteur_min, hauteur_max), 2)
+                elev = round(get_elevation(x / 800.0, y / 800.0, min_height, max_height), 2)
             else:
-                elev = round(i * denivele / 100 * 10, 2)
-            demand = 0.0  # jonctions = pas de demande directe, les maisons portent la demande
+                elev = round(i * elevation_gain / 100 * 10, 2)
+            demand = 0.0  # junctions = no direct demand, houses bear the demand
             w(f" {node:<16}\t{elev:<12}\t{demand:<12}\t                \t;  [{state}]")
 
         for i, (node, _) in enumerate(all_houses):
@@ -948,23 +948,23 @@ class App(ctk.CTk):
             pos_xy = self._pos_px.get(node)
             if pos_xy is not None:
                 x, y = pos_xy
-                elev = round(get_elevation(x / 800.0, y / 800.0, hauteur_min, hauteur_max), 2)
+                elev = round(get_elevation(x / 800.0, y / 800.0, min_height, max_height), 2)
             else:
-                elev = round(i * denivele / 100 * 2, 2)
-            demand = (round(demande_maison + 5.0, 5) if state == "surge" else round(demande_maison, 5))
+                elev = round(i * elevation_gain / 100 * 2, 2)
+            demand = (round(house_demand + 5.0, 5) if state == "surge" else round(house_demand, 5))
             w(f" {node:<16}\t{elev:<12}\t{demand:<12}\t                \t;  [{state}]")
         w("")
 
         w("[RESERVOIRS]")
         w(";ID              \tHead        \tPattern")
-        chateaux = [(n, d) for n, d in self._G.nodes(data=True) if d.get("type") == "chateau"]
-        for node, _ in chateaux:
+        towers = [(n, d) for n, d in self._G.nodes(data=True) if d.get("type") == "tower"]
+        for node, _ in towers:
             pos_xy = self._pos_px.get(node)
             if pos_xy is not None:
                 x, y = pos_xy
-                hauteur = 20 + round(get_elevation(x / 800.0, y / 800.0, hauteur_min, hauteur_max), 2)
+                hauteur = 20 + round(get_elevation(x / 800.0, y / 800.0, min_height, max_height), 2)
             else:
-                hauteur = round((hauteur_min + hauteur_max) / 2, 2)
+                hauteur = round((min_height + max_height) / 2, 2)
             w(f" {node:<16}\t{hauteur:<12}\t \t;")
         w("")
 
@@ -974,7 +974,7 @@ class App(ctk.CTk):
 
         w("[PIPES]")
         w(";ID              \tNode1           \tNode2           \tLength      \tDiameter    \tRoughness   \tMinorLoss   \tStatus")
-        len_main = round(math.sqrt(surface * 1e6) / max(len(all_juncs), 1), 1)
+        len_main = round(math.sqrt(area * 1e6) / max(len(all_juncs), 1), 1)
         len_sec = round(len_main * 0.1, 1)
 
         try:
@@ -1000,25 +1000,25 @@ class App(ctk.CTk):
             elev_u = self._G.nodes[u].get("elevation", 0)
             elev_v = self._G.nodes[v].get("elevation", 0)
 
-            # Si chateau d'eau -> diam_max
-            if type_u == "chateau" or type_v == "chateau":
+            # If water tower -> max_diam
+            if type_u == "tower" or type_v == "tower":
                 diam = diam_max
-                n1, n2 = (u, v) if type_u == "chateau" else (v, u)
+                n1, n2 = (u, v) if type_u == "tower" else (v, u)
                 pipes_lines.append(f" P{k + 1:<15}\t{n1:<16}\t{n2:<16}\t{len_main:<12}\t{diam:<12}\t{rug:<12}\t0 \tOpen \t;")
                 continue
             
-            # Si maison -> diam_min
+            # If house -> min_diam
             elif type_u == "house" or type_v == "house":
                 diam = diam_min
                 length = len_sec
                 pipes_lines.append(f" P{k + 1:<15}\t{u:<16}\t{v:<16}\t{length:<12}\t{diam:<12}\t{rug:<12}\t0 \tOpen \t;")
                 continue
             
-            # Si autres jonctions -> diam_intermédiaire
+            # If other junctions -> intermediate diam
             else:
                 diam = diam_inter
                 length = len_main
-                # Si fort dénivelé (PRV)
+                # If steep elevation (PRV)
                 if abs(elev_u - elev_v) > 15.0 and random.random() < 0.15:
                     n1, n2 = (u, v) if elev_u > elev_v else (v, u)
                     valves_lines.append(f" V{k + 1:<15}\t{n1:<16}\t{n2:<16}\t{diam:<10}\tPRV \t30 \t0")
@@ -1054,11 +1054,11 @@ class App(ctk.CTk):
         for node, state in self._node_state.items():
             if state == "broken":
                 ntype = self._G.nodes[node].get("type", "?")
-                w(f"; [CAPTEUR CASSÉ] {node}  (type: {ntype})")
+                w(f"; [BROKEN SENSOR] {node}  (type: {ntype})")
         w("")
 
-        dur_map = {"Statique (0h)": "0:00", "Dynamique (24h)": "24:00"}
-        duree = dur_map.get(p.get("mode_sim"), f"{p.get('duree', '0')}:00")
+        dur_map = {"Static (0h)": "0:00", "Dynamic (24h)": "24:00"}
+        duration = dur_map.get(p.get("sim_mode"), f"{p.get('duration', '0')}:00")
         hl = "H-W"
 
         w("[PATTERNS]");
@@ -1081,7 +1081,7 @@ class App(ctk.CTk):
         w(" Roughness Correlation \t0")
         w("[MIXING]")
         w("[TIMES]")
-        w(f" Duration           \t{duree} ")
+        w(f" Duration           \t{duration} ")
         w(" Hydraulic Timestep \t1:00 ");
         w(" Quality Timestep   \t0:05 ")
         w(" Pattern Timestep   \t1:00 ");
