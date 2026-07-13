@@ -4,6 +4,10 @@ simulator.py
 Improved multi-day hydraulic simulator.
 Does not modify any existing files — relies on Low_Demand.inp only.
 
+Authors:
+    - Ulrich Melade
+    - Etienne Gadefait
+
 Improvements vs Infinite_Simulator.py:
  1. Continuous 24h demand curve (no binary High/Low switching)
  2. Gaussian sensor noise (fixed component + proportional to signal)

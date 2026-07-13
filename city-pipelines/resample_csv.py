@@ -1,3 +1,26 @@
+Temporal downsampling of a simulation CSV.
+
+Author:
+    - Ulrich Melade
+
+What it does:
+    Loads a CSV produced by simulator.py (separator '|'), groups the rows into
+    fixed windows of freq_min minutes and aggregates each window: mean for the
+    numeric (sensor) columns, event-aware logic for the text columns
+    ('yd' -> 'yes' if any 'yes' in the window, 'ud' -> last active event,
+    others -> last value). The 't' column is finally converted to consecutive
+    point indices (0, 1, 2, ...). The output keeps exactly the same column
+    layout as the input, so it stays compatible with the other tools
+    (export_plots.py, concat_csv.py, HeMu).
+
+What to modify (in __main__) and its effect:
+    - input_path / output_path : source and destination CSV files.
+    - freq_min                 : aggregation window in minutes. A larger value
+                                 gives fewer rows and smoother curves, but
+                                 less temporal detail (short events may be
+                                 averaged out).
+"""
+
 import pandas as pd
 import numpy as np
 import os

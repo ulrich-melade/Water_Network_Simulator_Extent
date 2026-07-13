@@ -1,3 +1,47 @@
+Water Network Simulator — Graphical user interface.
+
+Original authors (PIR "Creation of a water simulation system for a small town"):
+    - Cecile Maurel
+    - Mathis Lelong
+    - Claire Horion
+    - Pierre-Antoine Acquaviva
+    - Bernys Lele-Ngoli
+
+Modifications:
+    - Ulrich Melade
+
+INSA Toulouse.
+
+What it does:
+    CustomTkinter GUI that generates a synthetic drinking-water network
+    (NetworkX): grid-like for an 'Urban' zone, spine-and-branches for a
+    'Rural' zone, with houses (M), junctions (J) and water towers (T), and
+    Perlin-noise elevations. The network is drawn on an interactive canvas;
+    clicking a node opens a popup to inject a fault (broken sensor,
+    demand x5 surge, leak). 'Export .inp' writes the EPANET file then calls
+    optimize_network.py to also produce the sized High_Demand.inp /
+    Low_Demand.inp variants used by simulator.py. 'Export Image' renders a
+    high-resolution SVG/PNG/PDF of the network.
+
+    Everyday use goes through the GUI (all form fields: houses, towers,
+    heights, zone, diameters, simulation mode, noise, % broken sensors).
+
+What to modify (in the code) and its effect:
+    - PALETTE constants (BG_*, NODE_*, EDGE_*): colors of the UI and of the
+      node types on the canvas.
+    - house_demand in _build_inp (0.007 L/s): base demand of each house
+      written to the .inp; raising it increases flows everywhere.
+    - surge demand in _build_inp (house_demand + 5.0): intensity of the
+      'surge' fault.
+    - emitter coefficient 0.75 in _build_inp ([EMITTERS]): size of the
+      'leak' fault; higher = bigger breach.
+    - peak_demand / min_pressure_bars in export_inp (0.5 L/s per house,
+      2.0 bars): sizing targets passed to optimize_network.py.
+    - _noise_generator (octaves=2, seed=42): terrain shape; change the seed
+      for a different elevation map.
+    - self.geometry("1280x720") / minsize: default window size.
+"""
+
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import filedialog

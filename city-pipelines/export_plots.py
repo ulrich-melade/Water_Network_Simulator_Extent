@@ -1,3 +1,25 @@
+Plots the time series contained in a simulation CSV.
+
+Author:
+    - Ulrich Melade
+
+INSA Toulouse.
+
+What it does:
+    Reads a CSV produced by simulator.py (separator '|', sentinel -1.0 = NaN)
+    and draws, for each monitored pipe, 4 columns of subplots: pressure,
+    pressure zoomed on the first 24 h, velocity and flow rate. Each subplot
+    superposes the 'Real' noiseless signal (x_* columns) and the noisy
+    'Measurement' signal (yc_* columns). Broken-sensor samples (NaN) are
+    marked with red crosses at the bottom of the plot. The figure is saved
+    as Simulation.png and displayed on screen.
+
+What to modify and its effect:
+    - CSV_PATH        : CSV file to plot.
+    - SHOW_NAN_POINTS : True/False, toggles the red crosses marking NaN
+                        (missing data / broken sensor) samples.
+"""
+
 import os
 import csv
 import numpy as np

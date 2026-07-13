@@ -1,3 +1,22 @@
+Concatenates two simulation CSV files into a single continuous dataset.
+
+Author:
+    - Ulrich Melade
+
+What it does:
+    Reads two CSV files produced by simulator.py (separator '|'), shifts the
+    time/point column 't' of the second file so that it starts right after the
+    end of the first one, then writes the merged file. Useful to build long
+    scenarios (e.g. 3 nominal days + 3 leak days -> one 6-day dataset).
+    Both inputs must have exactly the same columns (same monitored pipes),
+    otherwise the script aborts without writing anything.
+
+What to modify (in __main__) and its effect:
+    - file1_path  : first CSV; kept as-is, it defines the time origin.
+    - file2_path  : second CSV; its 't' column is shifted automatically.
+    - output_path : path of the merged CSV.
+"""
+
 import pandas as pd
 import numpy as np
 import os
