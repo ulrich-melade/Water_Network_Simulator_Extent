@@ -1,0 +1,15 @@
+# Generated data and figures
+*.csv
+*.svg
+*.pdf
+*.png
+
+# Python
+__pycache__/
+*.pyc
+
+# EPANET / WNTR runtime artifacts
+temp.inp
+temp.bin
+temp.rpt
+temp_state_realistic.json
